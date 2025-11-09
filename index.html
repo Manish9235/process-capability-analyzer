@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Process Capability (Cp/Cpk) Analyzer</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Chart.js for control charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Custom scrollbar for data entry */
+        textarea::-webkit-scrollbar {
+            width: 8px;
+        }
+        textarea::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        textarea::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        textarea::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        /* Ensure charts are responsive */
+        .chart-container {
+            position: relative;
+            height: 350px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans antialiased">
+
+    <div class="container mx-auto max-w-7xl p-4 sm:p-8">
+        <!-- Header -->
+        <header class="mb-6 pb-4 border-b border-gray-300">
+            <h1 class="text-3xl font-bold text-gray-800">Process Capability (Cp/Cpk) Analyzer</h1>
+            <p class="text-md text-gray-600">Automated data entry and analysis for production parts.</p>
+        </header>
+
+        <!-- Main Part Tabs -->
+        <nav id="part-tabs-nav" class="flex flex-wrap border-b border-gray-300 -mb-px">
+            <!-- Part tabs will be inserted here by JavaScript -->
+        </nav>
+
+        <!-- Main Content Area -->
+        <main id="part-content-area" class="mt-6">
+            <!-- Part content will be inserted here by JavaScript -->
+        </main>
+    </div>
+
+    <script>
+        // --- DATA ---
+        // Store all part and parameter definitions
+        const partsData = [
+            {
+                id: 'frs-m14',
+                name: "FRS (M14)",
+                number: "33121 - 0K061",
+                parameters: [
+                    { id: 'hole-pos-14-3', name: "Ø14.3 hole position", characteristic: "Ø0.1 M A(M)", measuringInstrument: "Spl Indicative Gauge", nominal: 0, usl: 0.1, lsl: 0 },
+                    { id: 'hole-straight-14', name: "Ø14 Hole Straightness", characteristic: "Ø0.01 (M)", measuringInstrument: "Form Tester", nominal: 0, usl: 0.01, lsl: 0 },
+                    { id: 'rough-14-0', name: "Ø14.0 Roughness", characteristic: "3.2 Ra", measuringInstrument: "Roughness tester", nominal: 3.2, usl: 3.2, lsl: 0 },
+                    { id: 'rough-14-3', name: "Ø14.3 Roughness", characteristic: "3.2 Ra", measuringInstrument: "Roughness tester", nominal: 3.2, usl: 3.2, lsl: 0 },
+                    { id: 'perp-12', name: "Ø12 Perpendicularity", characteristic: "0.1 C", measuringInstrument: "Height Guage", nominal: 0, usl: 0.1, lsl: 0 },
+                    { id: 'od-pos-12', name: "Ø12 OD Position", characteristic: "Ø0.3 A B E", measuringInstrument: "Height Guage", nominal: 0, usl: 0.3, lsl: 0 },
+                    { id: 'od-straight-12', name: "Ø12 OD straightness", characteristic: "Ø0.01 (M)", measuringInstrument: "Form Tester", nominal: 0, usl: 0.01, lsl: 0 },
+                    { id: 'od-rough-12', name: "Ø12 OD Roughness", characteristic: "4.5 Ra", measuringInstrument: "Roughness tester", nominal: 4.5, usl: 4.5, lsl: 0 },
+                    { id: 'distance', name: "Distance", characteristic: "50.5+/-0.15", measuringInstrument: "Spl Indicative Gauge", nominal: 50.5, usl: 50.65, lsl: 50.35 },
+                    { id: 'hole-dia-1', name: "Hole Diameter", characteristic: "Ø6 +0.12/0.07", measuringInstrument: "Bore gauge", nominal: 6, usl: 6.12, lsl: 6.07 },
+                    { id: 'hole-dia-2', name: "Hole Diameter", characteristic: "Ø6 +0.5/+0.07", measuringInstrument: "Vernier", nominal: 6, usl: 6.5, lsl: 6.07 },
+                    { id: 'hole-pos-6', name: "Ø6 Hole Position", characteristic: "Ø0.2 A M 3M", measuringInstrument: "Spl Indicative Gauge", nominal: 0, usl: 0.2, lsl: 0 },
+                    { id: 'face-pos-30', name: "30° Face Position", characteristic: "Ø0.3 A B M E", measuringInstrument: "Spl Indicative Gauge", nominal: 0, usl: 0.3, lsl: 0 }
+                ]
+            },
+            {
+                id: 'rbf-m15',
+                name: "RBF (M15)",
+                number: "33121 - 0K011",
+                parameters: [
+                    { id: 'diameter', name: "Diameter", characteristic: "Ø 35 -0.05/-0.089", nominal: 35, usl: 34.95, lsl: 34.911 },
+                    { id: 'surface-rough-35', name: "Ø35 Surface Roughness", characteristic: "6.3 Rz", nominal: 6.3, usl: 7.56, lsl: 5.04 },
+                    { id: 'flatness', name: "Flatness", nominal: 0, usl: 0.090, lsl: 0 },
+                    { id: 'flatness-2a-2d', name: "Flatness-2A to 2D", nominal: 0, usl: 0.040, lsl: 0 },
+                    { id: 'surface-rough-53', name: "Ø53 face Surface Roughness", characteristic: "12.5 Rz", nominal: 12.5, usl: 15, lsl: 10 },
+                    { id: 'bore-size', name: "Bore size", characteristic: "Ø53 +0.05/-0.00", nominal: 53, usl: 53.05, lsl: 53.00 },
+                    { id: 'depth-1', name: "Depth", characteristic: "3.64 ± 0.05", nominal: 3.64, usl: 3.69, lsl: 3.59 },
+                    { id: 'depth-2', name: "Depth", characteristic: "5.8 ± 0.05", nominal: 5.8, usl: 5.85, lsl: 5.75 },
+                    { id: 'hole-size', name: "Hole size", characteristic: "Ø8.8 +0.0/+0.09", nominal: 8.8, usl: 8.89, lsl: 8.80 },
+                    { id: 'runout', name: "Runout", nominal: 0, usl: 0.1, lsl: 0 },
+                    { id: 'concentricity', name: "Concentricity", nominal: 0, usl: 0.08, lsl: 0 }
+                ]
+            },
+            {
+                id: 'ror-m16',
+                name: "ROR (M16)",
+                number: "33121 - 0K010",
+                parameters: [
+                    { id: 'hole-dia-76', name: "Hole Diameter", characteristic: "Ø76 +0.5/-0.15", nominal: 76, usl: 76.5, lsl: 75.85 },
+                    { id: 'hole-dia-85', name: "Hole Diameter", characteristic: "Ø85 +0.05/+0.21", nominal: 85, usl: 85.21, lsl: 85.05 },
+                    { id: 'pos-5-03', name: "Position of 5.03 w.r.t B", nominal: 0, usl: 0.15, lsl: -0.15 },
+                    { id: 'thick-a', name: "Thickness (A)", characteristic: "6 +/-0.5", nominal: 6, usl: 6.5, lsl: 5.5 },
+                    { id: 'thick-b', name: "Thickness (B)", characteristic: "6 +0.9/-0.5", nominal: 6, usl: 6.9, lsl: 5.5 },
+                    { id: 'thick-c', name: "Thickness (C)", characteristic: "6 +0.9/-0.5", nominal: 6, usl: 6.9, lsl: 5.5 },
+                    { id: 'thick-d', name: "Thickness (D)", characteristic: "6 +0.9/-0.5", nominal: 6, usl: 6.9, lsl: 5.5 },
+                    { id: 'bore-depth', name: "Bore depth", characteristic: "2 +/-0.2", nominal: 2, usl: 2.2, lsl: 1.8 },
+                    { id: 'pos-4-7', name: "Position of 4.7 w.r.t to B", nominal: 0, usl: 0.2, lsl: -0.2 },
+                    { id: 'true-radius', name: "True Radius", characteristic: "R35.5 +0.0/+0.6", nominal: 35.5, usl: 36.1, lsl: 35.5 },
+                    { id: 'diameter-92-5', name: "Diameter", characteristic: "Ø92.5 ±0.3", nominal: 92.5, usl: 92.8, lsl: 92.2 }
+                ]
+            },
+            {
+                id: 'fork1-m04',
+                name: "Fork-1 (M04)",
+                number: "33121 - 0K111",
+                parameters: [
+                    { id: 'hole-loc-5-25', name: "Hole location of Ø5.25", characteristic: "102.28 ±0.075", nominal: 102.28, usl: 102.355, lsl: 102.205 },
+                    { id: 'hole-pos-tol-5-25', name: "Ø5.25 hole positional tolerance", nominal: 0, usl: 0.1, lsl: -0.1 },
+                    { id: 'slot-face-pos-10-3', name: "10.3 Slot face positional tolerance", nominal: 0, usl: 0.1, lsl: -0.1 },
+                    { id: 'hole-loc-4-9', name: "Hole dia 4.9 location", characteristic: "78.53 ±0.05", nominal: 78.53, usl: 78.58, lsl: 78.48 },
+                    { id: 'chamfer-depth', name: "Chamfer Depth over roller dimension", characteristic: "20.86 +0.05/-0.1", nominal: 20.86, usl: 20.91, lsl: 20.76 },
+                    { id: 'hole-pos-tol', name: "Hole Positional Tolerance", nominal: 0, usl: 0.15, lsl: -0.15 },
+                    { id: 'chamfer-pos', name: "Position of Chamfer", nominal: 0, usl: 0.15, lsl: -0.15 },
+                    { id: 'dim-across-flat', name: "Dimension across flat", characteristic: "13.1 ±0.1", nominal: 13.1, usl: 13.2, lsl: 13.0 },
+                    { id: 'v-groove-loc', name: "128° V Groove Location", characteristic: "74.28 ±0.1", nominal: 74.28, usl: 74.38, lsl: 74.18 }
+                ]
+            },
+            {
+                id: 'fork2-m17',
+                name: "Fork-2 (M17)",
+                number: "33121 - 0K070",
+                parameters: [
+                    { id: 'hole-loc-5-25', name: "Hole location of Ø 5.25", characteristic: "190.68 ± 0.05", nominal: 190.68, usl: 190.73, lsl: 190.63 },
+                    { id: 'hole-pos-tol-5-25', name: "Ø 5.25 hole positional tolerance", characteristic: "⌀0.07 A", nominal: 0, usl: 0.07, lsl: 0 },
+                    { id: 'v-groove-70', name: "70° V Groove Location", characteristic: "166.93 ± 0.05", nominal: 166.93, usl: 166.98, lsl: 166.88 },
+                    { id: 'v-groove-128', name: "128° V Groove Location", characteristic: "166.93 ± 0.05", nominal: 166.93, usl: 166.98, lsl: 166.88 },
+                    { id: 'angularity-70', name: "Angularity of 70° Groove", characteristic: "∠0.15 B", nominal: 0, usl: 0.15, lsl: 0 },
+                    { id: 'angularity-115', name: "Angularity of 115° Groove", characteristic: "∠0.15 B", nominal: 0, usl: 0.15, lsl: 0 },
+                    { id: 'dim-across-flat', name: "Dimension across flat", characteristic: "13.1+/-0.1", nominal: 13.1, usl: 13.2, lsl: 13.0 },
+                    { id: 'chamfer', name: "Chamfer", characteristic: "3.4 +0/-0.5", nominal: 3.4, usl: 3.4, lsl: 2.9 },
+                    { id: 'distance', name: "Distance", characteristic: "208.53 ± 0.07", nominal: 208.53, usl: 208.60, lsl: 208.46 }
+                ]
+            }
+        ];
+
+        // Constants for X-bar & R charts (n=5 subgroups)
+        const controlChartConstants = {
+            5: { d2: 2.326, A2: 0.577, D3: 0, D4: 2.114 }
+        };
+
+        // --- STATE ---
+        // Store references to active charts to destroy them
+        const chartInstances = {};
+        // Store latest stats for CSV download
+        const latestStats = {};
+
+        // --- UTILITY FUNCTIONS ---
+
+        /**
+         * Generates a random number from a normal distribution.
+         * Uses the Box-Muller transform.
+         */
+        function generateRandomNormal(mean, stdDev) {
+            let u1 = 0, u2 = 0;
+            while (u1 === 0) u1 = Math.random(); //Converting [0,1) to (0,1)
+            while (u2 === 0) u2 = Math.random();
+            const z1 = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+            return z1 * stdDev + mean;
+        }
+
+        /**
+         * Parses data from the 50 input fields.
+         */
+        function parseData(partId, paramId) {
+            const inputs = document.querySelectorAll(`#data-inputs-${partId}-${paramId} input`);
+            const data = [];
+            
+            for (let i = 0; i < inputs.length; i++) {
+                const input = inputs[i];
+                const value = input.value;
+                if (value === '') {
+                    return { error: `Missing value for Sample ${i + 1}. Please enter all 50 samples.` };
+                }
+                const num = Number(value);
+                if (isNaN(num)) {
+                    return { error: `Data for Sample ${i + 1} contains non-numeric value: '${value}'. Please check entries.` };
+                }
+                data.push(num);
+            }
+            
+            // Check for correct sample size
+            if (data.length !== 50) {
+                return { error: `Invalid sample size. Expected 50, but found ${data.length}.` };
+            }
+            return { data };
+        }
+
+        /**
+         * Gets the color-coding class for capability indices.
+         */
+        function getCapabilityColor(value) {
+            if (value < 1.00) {
+                return 'bg-red-100 text-red-800 font-bold';
+            } else if (value >= 1.00 && value < 1.33) {
+                return 'bg-yellow-100 text-yellow-800 font-bold';
+            } else {
+                return 'bg-green-100 text-green-800 font-bold';
+            }
+        }
+
+        // --- CORE LOGIC ---
+
+        /**
+         * Initializes the entire application.
+         * Generates the UI for all parts and tabs.
+         */
+        function initializeApp() {
+            const partTabsNav = document.getElementById('part-tabs-nav');
+            const mainPartContentArea = document.getElementById('part-content-area'); // Renamed to avoid conflict
+
+            partsData.forEach((part, index) => {
+                // 1. Create Main Part Tab
+                const partTab = document.createElement('button');
+                partTab.className = `py-3 px-5 font-medium text-gray-600 border-b-2 border-transparent hover:text-blue-600 focus:outline-none`;
+                partTab.textContent = part.name;
+                partTab.dataset.target = `part-content-${part.id}`;
+                partTab.addEventListener('click', () => showPartContent(part.id));
+                partTabsNav.appendChild(partTab);
+
+                // 2. Create Main Part Content Container
+                const partContent = document.createElement('div');
+                partContent.id = `part-content-${part.id}`;
+                partContent.className = 'hidden';
+                
+                // 3. Add Part Info Header
+                partContent.innerHTML = `
+                    <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h2 class="text-2xl font-semibold text-gray-900">${part.name}</h2>
+                                <p class="text-gray-600">Part Number: ${part.number}</p>
+                            </div>
+                            <button id="download-all-${part.id}" class="py-2 px-4 bg-indigo-600 text-white font-semibold rounded-md shadow-sm hover:bg-indigo-700 transition duration-150 ease-in-out">
+                                Download All Parameters CSV
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                // 4. Create Sub-Tabs (Parameters)
+                const paramTabsNav = document.createElement('nav');
+                paramTabsNav.className = 'flex flex-wrap border-b border-gray-200 -mb-px';
+                
+                const paramContentArea = document.createElement('div'); // This is the sub-area for parameters
+                paramContentArea.className = 'mt-6';
+
+                part.parameters.forEach((param, pIndex) => {
+                    // Create Parameter Tab
+                    const paramTab = document.createElement('button');
+                    paramTab.className = 'py-2 px-4 font-medium text-sm text-gray-500 border-b-2 border-transparent hover:text-gray-700 focus:outline-none';
+                    paramTab.textContent = param.name;
+                    paramTab.dataset.target = `param-content-${part.id}-${param.id}`;
+                    paramTab.addEventListener('click', () => showParamContent(part.id, param.id));
+                    paramTabsNav.appendChild(paramTab);
+
+                    // Create Parameter Content
+                    const paramContent = document.createElement('div'); // This is the content for one parameter
+                    paramContent.id = `param-content-${part.id}-${param.id}`;
+                    paramContent.className = 'hidden';
+                    paramContent.innerHTML = `
+                        <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                            <!-- Left: Data Entry -->
+                            <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">
+                                <h3 class="text-xl font-semibold mb-4 text-gray-800">${param.name} - Data Entry</h3>
+                                <div class="mb-4 space-y-1">
+                                    ${param.characteristic ? `<p class="text-sm font-medium text-gray-700">Characteristic: <span class="font-mono text-purple-700">${param.characteristic}</span></p>` : ''}
+                                    <p class="text-sm font-medium text-gray-700">Nominal: <span class="font-mono text-blue-700">${param.nominal.toFixed(4)}</span></p>
+                                    <p class="text-sm font-medium text-gray-700">USL: <span class="font-mono text-green-700">${param.usl.toFixed(4)}</span></p>
+                                    <p class="text-sm font-medium text-gray-700">LSL: <span class="font-mono text-red-700">${param.lsl.toFixed(4)}</span></p>
+                                </div>
+                                <label for="data-inputs-${part.id}-${param.id}" class="block text-sm font-medium text-gray-700 mb-2">
+                                    Enter 50 samples:
+                                </label>
+                                <div id="data-inputs-${part.id}-${param.id}" class="grid grid-cols-5 gap-2 max-h-72 overflow-y-auto p-3 border border-gray-300 rounded-md bg-gray-50">
+                                    <!-- 50 input fields will be generated here -->
+                                </div>
+                                <div id="error-msg-${part.id}-${param.id}" class="text-red-600 text-sm mt-2 font-medium h-6"></div>
+                                <div class="flex flex-wrap gap-3 mt-4">
+                                    <button id="gen-${part.id}-${param.id}" class="flex-1 py-2 px-4 bg-green-600 text-white font-semibold rounded-md shadow-sm hover:bg-green-700 transition duration-150 ease-in-out min-w-[120px]">Generate Data</button>
+                                    <button id="calc-${part.id}-${param.id}" class="flex-1 py-2 px-4 bg-blue-600 text-white font-semibold rounded-md shadow-sm hover:bg-blue-700 transition duration-150 ease-in-out min-w-[120px]">Calculate</button>
+                                    <button id="clear-${part.id}-${param.id}" class="flex-1 py-2 px-4 bg-red-600 text-white font-semibold rounded-md shadow-sm hover:bg-red-700 transition duration-150 ease-in-out min-w-[120px]">Clear</button>
+                                </div>
+                            </div>
+                            
+                            <!-- Right: Results -->
+                            <div id="results-area-${part.id}-${param.id}" class="lg:col-span-3 bg-white p-6 rounded-lg shadow-md hidden">
+                                <h3 class="text-xl font-semibold mb-4 text-gray-800">Calculation Results</h3>
+                                <table class="w-full min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Metric</th>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="results-table-${part.id}-${param.id}" class="bg-white divide-y divide-gray-200">
+                                        <!-- Results rows inserted here -->
+                                    </tbody>
+                                </table>
+                                <button id="csv-${part.id}-${param.id}" class="mt-4 py-2 px-4 bg-gray-700 text-white font-semibold rounded-md shadow-sm hover:bg-gray-800 transition duration-150 ease-in-out">
+                                    Download Results (.csv)
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Bottom: Control Charts -->
+                        <div id="charts-area-${part.id}-${param.id}" class="mt-6 bg-white p-6 rounded-lg shadow-md hidden">
+                             <h3 class="text-xl font-semibold mb-6 text-gray-800">Control Charts (Subgroup Size n=5)</h3>
+                             <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                                <div>
+                                    <h4 class="text-lg font-medium text-center text-gray-700 mb-3">X-bar Chart</h4>
+                                    <div class="chart-container">
+                                        <canvas id="xbar-chart-${part.id}-${param.id}"></canvas>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h4 class="text-lg font-medium text-center text-gray-700 mb-3">R Chart</h4>
+                                    <div class="chart-container">
+                                        <canvas id="r-chart-${part.id}-${param.id}"></canvas>
+                                    </div>
+                                </div>
+                             </div>
+                        </div>
+                    `;
+                    
+                    // --- FIX: Search within the in-memory 'paramContent' element ---
+                    // We do this *before* appending paramContent to the DOM, so we can't use document.getElementById
+                    const dataInputContainer = paramContent.querySelector(`#data-inputs-${part.id}-${param.id}`);
+                    if (dataInputContainer) { // Check if it was found
+                        dataInputContainer.innerHTML = ''; // Clear any existing
+                        for (let i = 1; i <= 50; i++) {
+                            const input = document.createElement('input');
+                            input.type = 'number';
+                            input.step = '0.0001'; // Allow fine precision
+                            input.className = 'w-full p-2 border border-gray-300 rounded-md shadow-sm text-sm font-mono focus:ring-blue-500 focus:border-blue-500';
+                            input.placeholder = `S${i}`; // Short placeholder "S1", "S2", etc.
+                            input.title = `Sample ${i}`; // Tooltip
+                            dataInputContainer.appendChild(input);
+                        }
+                    }
+                    // --- End of fix ---
+
+                    paramContentArea.appendChild(paramContent); // Add the single parameter's content to the sub-area
+
+                    // Attach event listeners directly to the elements inside the in-memory paramContent.
+                    // Use paramContent.querySelector so it works before the part content is appended to the document.
+                    const genBtn = paramContent.querySelector(`#gen-${part.id}-${param.id}`);
+                    const calcBtn = paramContent.querySelector(`#calc-${part.id}-${param.id}`);
+                    const clearBtn = paramContent.querySelector(`#clear-${part.id}-${param.id}`);
+                    const csvBtn = paramContent.querySelector(`#csv-${part.id}-${param.id}`);
+
+                    if (genBtn) genBtn.addEventListener('click', () => handleGenerate(part.id, param.id));
+                    if (calcBtn) calcBtn.addEventListener('click', () => handleCalculate(part.id, param.id));
+                    if (clearBtn) clearBtn.addEventListener('click', () => handleClear(part.id, param.id));
+                    if (csvBtn) csvBtn.addEventListener('click', () => handleDownloadCSV(part.id, param.id));
+                });
+
+                partContent.appendChild(paramTabsNav);
+                partContent.appendChild(paramContentArea); // Add sub-area to the part's main content div
+                mainPartContentArea.appendChild(partContent); // --- FIX: Add the part's content to the *main* content area
+
+                // Add event listener for "Download All Parameters CSV" button
+                const downloadAllBtn = partContent.querySelector(`#download-all-${part.id}`);
+                if (downloadAllBtn) {
+                    downloadAllBtn.addEventListener('click', () => handleDownloadAllParameters(part.id));
+                }
+            });
+
+            // Activate the first part and its first parameter by default
+            if (partsData.length > 0) {
+                const firstPart = partsData[0];
+                showPartContent(firstPart.id);
+                if (firstPart.parameters.length > 0) {
+                    showParamContent(firstPart.id, firstPart.parameters[0].id);
+                }
+            }
+        }
+
+        /**
+         * Shows the content for a specific part.
+         */
+        function showPartContent(partId) {
+            // Hide all part content
+            document.querySelectorAll('#part-content-area > div').forEach(div => {
+                div.classList.add('hidden');
+            });
+            // Deactivate all part tabs
+            document.querySelectorAll('#part-tabs-nav button').forEach(btn => {
+                btn.classList.remove('text-blue-600', 'border-blue-600');
+                btn.classList.add('text-gray-600', 'border-transparent');
+            });
+
+            // Show target part content
+            const content = document.getElementById(`part-content-${partId}`);
+            if (content) {
+                content.classList.remove('hidden');
+            }
+            // Activate target part tab
+            const tabButton = document.querySelector(`#part-tabs-nav button[data-target="part-content-${partId}"]`);
+            if (tabButton) {
+                tabButton.classList.add('text-blue-600', 'border-blue-600');
+                tabButton.classList.remove('text-gray-600', 'border-transparent');
+            }
+        }
+
+        /**
+         * Shows the content for a specific parameter within a part.
+         */
+        function showParamContent(partId, paramId) {
+            const partContent = document.getElementById(`part-content-${partId}`);
+            if (!partContent) return; // Guard clause
+
+            // Hide all param content for this part
+            partContent.querySelectorAll(`div[id^="param-content-${partId}-"]`).forEach(div => {
+                div.classList.add('hidden');
+            });
+            // Deactivate all param tabs for this part
+            partContent.querySelectorAll('nav button').forEach(btn => {
+                btn.classList.remove('text-blue-600', 'border-blue-600', 'font-semibold');
+                btn.classList.add('text-gray-500', 'border-transparent');
+            });
+
+            // Show target param content
+            const content = document.getElementById(`param-content-${partId}-${paramId}`);
+            if (content) {
+                content.classList.remove('hidden');
+            }
+            // Activate target param tab
+            const tabButton = partContent.querySelector(`nav button[data-target="param-content-${partId}-${paramId}"]`);
+            if (tabButton) {
+                tabButton.classList.add('text-blue-600', 'border-blue-600', 'font-semibold');
+                tabButton.classList.remove('text-gray-500', 'border-transparent');
+            }
+        }
+
+
+        /**
+         * Finds the part and parameter objects from their IDs.
+         */
+        function getParamData(partId, paramId) {
+            const part = partsData.find(p => p.id === partId);
+            const param = part.parameters.find(p => p.id === paramId);
+            return { part, param };
+        }
+
+        /**
+         * Handles the "Generate Data" button click.
+         */
+        function handleGenerate(partId, paramId) {
+            const { param } = getParamData(partId, paramId);
+            const inputs = document.querySelectorAll(`#data-inputs-${partId}-${paramId} input`);
+            if (inputs.length === 0) return; // Guard clause
+            
+            // Generate data centered on nominal with a std dev that gives a decent Cpk
+            // Target a std dev that gives Cp ~ 1.5
+            const tolerance = param.usl - param.lsl;
+            const stdDev = tolerance / (6 * 1.5); // Cp = Tol / (6*sigma) => sigma = Tol / (6*Cp)
+            const mean = param.nominal;
+
+            const data = [];
+            for (let i = 0; i < 50; i++) {
+                data.push(generateRandomNormal(mean, stdDev).toFixed(4));
+            }
+            
+            inputs.forEach((input, index) => {
+                if (data[index] !== undefined) {
+                    input.value = data[index];
+                }
+            });
+            handleClear(partId, paramId, false); // Clear results, but not inputs
+        }
+
+        /**
+         * Handles the "Clear" button click.
+         */
+        function handleClear(partId, paramId, clearText = true) {
+            if (clearText) {
+                const inputs = document.querySelectorAll(`#data-inputs-${partId}-${paramId} input`);
+                inputs.forEach(input => {
+                    input.value = '';
+                });
+            }
+            
+            const errorDiv = document.getElementById(`error-msg-${partId}-${paramId}`);
+            if (errorDiv) errorDiv.textContent = '';
+            
+            const resultsArea = document.getElementById(`results-area-${partId}-${paramId}`);
+            if (resultsArea) resultsArea.classList.add('hidden');
+
+            const chartsArea = document.getElementById(`charts-area-${partId}-${paramId}`);
+            if (chartsArea) chartsArea.classList.add('hidden');
+
+            const tableBody = document.getElementById(`results-table-${partId}-${paramId}`);
+            if (tableBody) tableBody.innerHTML = '';
+
+            // Destroy old charts (keys must match those used when creating charts)
+            const xChartId = `xbar-${partId}-${paramId}`;
+            const rChartId = `r-chart-${partId}-${paramId}`;
+            if (chartInstances[xChartId]) {
+                try { chartInstances[xChartId].destroy(); } catch (e) { /* ignore */ }
+                delete chartInstances[xChartId];
+            }
+            if (chartInstances[rChartId]) {
+                try { chartInstances[rChartId].destroy(); } catch (e) { /* ignore */ }
+                delete chartInstances[rChartId];
+            }
+        }
+
+        /**
+         * Handles the "Calculate" button click.
+         */
+        function handleCalculate(partId, paramId) {
+            handleClear(partId, paramId, false); // Clear previous results
+            
+            const { param } = getParamData(partId, paramId);
+            const errorDiv = document.getElementById(`error-msg-${partId}-${paramId}`);
+            
+            const { data, error } = parseData(partId, paramId); // Changed to pass IDs
+            if (error) {
+                if (errorDiv) errorDiv.textContent = error;
+                return;
+            }
+
+            // --- Perform Calculations ---
+            const stats = calculateAllStats(data, param.usl, param.lsl);
+            
+            // Store for CSV download
+            latestStats[`${partId}-${paramId}`] = stats;
+
+            // --- Display Results ---
+            displayResults(stats, partId, paramId);
+            
+            // --- Render Charts ---
+            renderControlCharts(stats, partId, paramId);
+        }
+
+        /**
+         * The core calculation engine.
+         */
+        function calculateAllStats(data, usl, lsl) {
+            const n = 50;
+            const k = 10; // 10 subgroups
+            const m = 5;  // 5 samples per subgroup
+            const constants = controlChartConstants[m];
+
+            // 1. Overall stats
+            const mean = data.reduce((a, b) => a + b, 0) / n;
+            const max = Math.max(...data);
+            const min = Math.min(...data);
+            const tolerance = usl - lsl;
+            const stdDevOverall = Math.sqrt(
+                data.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b, 0) / (n - 1)
+            );
+
+            // 2. Subgroup stats
+            const subgroups = [];
+            const Xbars = [];
+            const Ranges = [];
+            for (let i = 0; i < k; i++) {
+                const subgroup = data.slice(i * m, (i + 1) * m);
+                subgroups.push(subgroup);
+                
+                const subMax = Math.max(...subgroup);
+                const subMin = Math.min(...subgroup);
+                const subRange = subMax - subMin;
+                const subMean = subgroup.reduce((a, b) => a + b, 0) / m;
+                
+                Ranges.push(subRange);
+                Xbars.push(subMean);
+            }
+
+            const Rbar = Ranges.reduce((a, b) => a + b, 0) / k;
+            const XdoubleBar = Xbars.reduce((a, b) => a + b, 0) / k; // This is a better estimate of the mean
+
+            // 3. Capability (Cp/Cpk - short-term, within-subgroup)
+            const sigmaWithin = Rbar / constants.d2;
+            const Cp = tolerance / (6 * sigmaWithin);
+            const CPU = (usl - XdoubleBar) / (3 * sigmaWithin);
+            const CPL = (XdoubleBar - lsl) / (3 * sigmaWithin);
+            const Cpk = Math.min(CPU, CPL);
+
+            // 4. Performance (Pp/Ppk - long-term, overall)
+            const Pp = tolerance / (6 * stdDevOverall);
+            const PpU = (usl - XdoubleBar) / (3 * stdDevOverall); // Use XdoubleBar for mean
+            const PpL = (XdoubleBar - lsl) / (3 * stdDevOverall);
+            const Ppk = Math.min(PpU, PpL);
+
+            // 5. Control Limits
+            const Xbar_CL = XdoubleBar;
+            const Xbar_UCL = XdoubleBar + (constants.A2 * Rbar);
+            const Xbar_LCL = XdoubleBar - (constants.A2 * Rbar);
+
+            const R_CL = Rbar;
+            const R_UCL = constants.D4 * Rbar;
+            const R_LCL = constants.D3 * Rbar;
+
+            return {
+                mean: XdoubleBar, // Use grand average as the best estimate of the mean
+                max,
+                min,
+                tolerance,
+                sigmaWithin,
+                stdDevOverall,
+                Cp, Cpk,
+                Pp, Ppk, PpU, PpL,
+                subgroups, Xbars, Ranges,
+                controlLimits: {
+                    Xbar: { CL: Xbar_CL, UCL: Xbar_UCL, LCL: Xbar_LCL },
+                    R: { CL: R_CL, UCL: R_UCL, LCL: R_LCL }
+                },
+                rawData: data // For CSV
+            };
+        }
+
+        /**
+         * Populates the results table.
+         */
+        function displayResults(stats, partId, paramId) {
+            const tableBody = document.getElementById(`results-table-${partId}-${paramId}`);
+            if (!tableBody) return;
+            tableBody.innerHTML = ''; // Clear old results
+
+            const metrics = [
+                { name: 'Average (X̄̄)', value: stats.mean.toFixed(4) },
+                { name: 'Max', value: stats.max.toFixed(4) },
+                { name: 'Min', value: stats.min.toFixed(4) },
+                { name: 'Tolerance (USL-LSL)', value: stats.tolerance.toFixed(4) },
+                { name: 'Sigma (Within)', value: stats.sigmaWithin.toFixed(4) },
+                { name: 'Sigma (Overall)', value: stats.stdDevOverall.toFixed(4) },
+                { name: 'Cp', value: stats.Cp.toFixed(3), color: getCapabilityColor(stats.Cp) },
+                { name: 'Cpk', value: stats.Cpk.toFixed(3), color: getCapabilityColor(stats.Cpk) },
+                { name: 'Pp', value: stats.Pp.toFixed(3), color: getCapabilityColor(stats.Pp) },
+                { name: 'Ppk', value: stats.Ppk.toFixed(3), color: getCapabilityColor(stats.Ppk) },
+                { name: 'PpU', value: stats.PpU.toFixed(3) },
+                { name: 'PpL', value: stats.PpL.toFixed(3) },
+            ];
+
+            metrics.forEach(metric => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-800">${metric.name}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600 ${metric.color || ''}">${metric.value}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+
+            const resultsArea = document.getElementById(`results-area-${partId}-${paramId}`);
+            if (resultsArea) resultsArea.classList.remove('hidden');
+        }
+
+        /**
+         * Renders the X-bar and R charts.
+         */
+        function renderControlCharts(stats, partId, paramId) {
+            const chartLabels = Array.from({ length: 10 }, (_, i) => `Subgroup ${i + 1}`);
+            
+            // --- X-bar Chart ---
+            const xChartId = `xbar-${partId}-${paramId}`;
+            const xCanvas = document.getElementById(`xbar-chart-${partId}-${paramId}`);
+            if (!xCanvas) return;
+            const xCtx = xCanvas.getContext('2d');
+            
+            if (chartInstances[xChartId]) chartInstances[xChartId].destroy();
+            chartInstances[xChartId] = new Chart(xCtx, {
+                type: 'line',
+                data: {
+                    labels: chartLabels,
+                    datasets: [
+                        {
+                            label: 'X-bar',
+                            data: stats.Xbars,
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                            borderWidth: 2,
+                            pointRadius: 4,
+                            pointBackgroundColor: 'rgba(54, 162, 235, 1)',
+                        },
+                        {
+                            label: 'UCL',
+                            data: Array(10).fill(stats.controlLimits.Xbar.UCL),
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            pointRadius: 0,
+                            fill: false,
+                        },
+                        {
+                            label: 'CL',
+                            data: Array(10).fill(stats.controlLimits.Xbar.CL),
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            fill: false,
+                        },
+                        {
+                            label: 'LCL',
+                            data: Array(10).fill(stats.controlLimits.Xbar.LCL),
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            pointRadius: 0,
+                            fill: false,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: false } }
+                }
+            });
+
+            // --- R Chart ---
+            const rChartId = `r-chart-${partId}-${paramId}`; // Corrected ID
+            const rCanvas = document.getElementById(rChartId);
+            if (!rCanvas) return;
+            const rCtx = rCanvas.getContext('2d');
+
+            if (chartInstances[rChartId]) chartInstances[rChartId].destroy();
+            chartInstances[rChartId] = new Chart(rCtx, {
+                type: 'line',
+                data: {
+                    labels: chartLabels,
+                    datasets: [
+                        {
+                            label: 'Range',
+                            data: stats.Ranges,
+                            borderColor: 'rgba(255, 159, 64, 1)',
+                            backgroundColor: 'rgba(255, 159, 64, 0.2)',
+                            borderWidth: 2,
+                            pointRadius: 4,
+                            pointBackgroundColor: 'rgba(255, 159, 64, 1)',
+                        },
+                        {
+                            label: 'UCL',
+                            data: Array(10).fill(stats.controlLimits.R.UCL),
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            pointRadius: 0,
+                            fill: false,
+                        },
+                        {
+                            label: 'CL',
+                            data: Array(10).fill(stats.controlLimits.R.CL),
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            fill: false,
+                        },
+                        {
+                            label: 'LCL',
+                            data: Array(10).fill(stats.controlLimits.R.LCL),
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            pointRadius: 0,
+                            fill: false,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+
+            const chartsArea = document.getElementById(`charts-area-${partId}-${paramId}`);
+            if (chartsArea) chartsArea.classList.remove('hidden');
+        }
+
+        /**
+         * Handles the "Download CSV" button click.
+         */
+        function handleDownloadCSV(partId, paramId) {
+            const { part, param } = getParamData(partId, paramId);
+            const stats = latestStats[`${partId}-${paramId}`];
+
+            if (!stats) {
+                // Do not use alert
+                console.error("Please calculate the results first.");
+                const errorDiv = document.getElementById(`error-msg-${partId}-${paramId}`);
+                if (errorDiv) errorDiv.textContent = "Please calculate results before downloading.";
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+
+            // Format as shown in image: Check Item row, then Characteristic row
+            // First row: Check Item headers
+            csvContent += "Check Item,";
+            csvContent += `"${param.name}"`;
+            
+            // Add all other parameters from the same part (for complete part data)
+            const allParams = part.parameters;
+            allParams.forEach((p, idx) => {
+                if (p.id !== paramId) {
+                    csvContent += `,"${p.name}"`;
+                }
+            });
+            csvContent += "\n";
+
+            // Second row: Characteristic values
+            csvContent += "Characteristic,";
+            const characteristic = param.characteristic || `${param.nominal} ±${((param.usl - param.lsl) / 2).toFixed(4)}`;
+            csvContent += `"${characteristic}"`;
+            
+            // Add characteristics for other parameters
+            allParams.forEach((p, idx) => {
+                if (p.id !== paramId) {
+                    const char = p.characteristic || `${p.nominal} ±${((p.usl - p.lsl) / 2).toFixed(4)}`;
+                    csvContent += `,"${char}"`;
+                }
+            });
+            csvContent += "\n\n";
+
+            // Add detailed metrics section
+            csvContent += "Part Name,Part Number,Parameter,Nominal,USL,LSL\n";
+            csvContent += `"${part.name}","${part.number}","${param.name}",${param.nominal},${param.usl},${param.lsl}\n\n`;
+
+            // Metrics
+            csvContent += "Metric,Value\n";
+            csvContent += `Average (X̄̄),${stats.mean.toFixed(4)}\n`;
+            csvContent += `Max,${stats.max.toFixed(4)}\n`;
+            csvContent += `Min,${stats.min.toFixed(4)}\n`;
+            csvContent += `Tolerance (USL-LSL),${stats.tolerance.toFixed(4)}\n`;
+            csvContent += `Sigma (Within),${stats.sigmaWithin.toFixed(4)}\n`;
+            csvContent += `Sigma (Overall),${stats.stdDevOverall.toFixed(4)}\n`;
+            csvContent += `Cp,${stats.Cp.toFixed(3)}\n`;
+            csvContent += `Cpk,${stats.Cpk.toFixed(3)}\n`;
+            csvContent += `Pp,${stats.Pp.toFixed(3)}\n`;
+            csvContent += `Ppk,${stats.Ppk.toFixed(3)}\n`;
+            csvContent += `PpU,${stats.PpU.toFixed(3)}\n`;
+            csvContent += `PpL,${stats.PpL.toFixed(3)}\n\n`;
+
+            // Subgroup Data Table
+            csvContent += "Subgroup Data (n=5)\n";
+            csvContent += "Subgroup,Sample 1,Sample 2,Sample 3,Sample 4,Sample 5,X-bar,Range\n";
+            
+            stats.subgroups.forEach((subgroup, index) => {
+                let row = `${index + 1},`;
+                row += subgroup.map(val => val.toFixed(4)).join(',');
+                row += `,${stats.Xbars[index].toFixed(4)},${stats.Ranges[index].toFixed(4)}\n`;
+                csvContent += row;
+            });
+
+            // Add Averages row
+            csvContent += `Averages,,,,,,${stats.mean.toFixed(4)},${stats.controlLimits.R.CL.toFixed(4)}\n\n`;
+
+
+            // Raw Data (Original 50 samples)
+            csvContent += "Raw Data Log\n";
+            csvContent += "Sample Number,Value\n";
+            stats.rawData.forEach((val, index) => {
+                csvContent += `${index + 1},${val.toFixed(4)}\n`;
+            });
+
+            // Create download link
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `${part.id}_${param.id}_capability_study.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        /**
+         * Helper function to escape CSV values (only add quotes if needed)
+         */
+        function escapeCSV(value) {
+            if (value === null || value === undefined) return '';
+            const str = String(value);
+            // Only quote if contains comma, quote, or newline
+            if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                return `"${str.replace(/"/g, '""')}"`;
+            }
+            return str;
+        }
+
+        /**
+         * Handles downloading all parameters for a part in comprehensive format matching the image
+         */
+        function handleDownloadAllParameters(partId) {
+            const part = partsData.find(p => p.id === partId);
+            if (!part) return;
+
+            // Collect all calculated stats for all parameters
+            const allStats = {};
+            const allData = {};
+            
+            part.parameters.forEach((param) => {
+                const statsKey = `${partId}-${param.id}`;
+                const stats = latestStats[statsKey];
+                
+                if (stats) {
+                    allStats[param.id] = stats;
+                } else {
+                    // If not calculated, try to get raw data
+                    const { data, error } = parseData(partId, param.id);
+                    if (!error && data) {
+                        // Calculate stats on the fly
+                        allStats[param.id] = calculateAllStats(data, param.usl, param.lsl);
+                    }
+                }
+                
+                // Get raw data for samples
+                const { data } = parseData(partId, param.id);
+                if (data) {
+                    allData[param.id] = data;
+                }
+            });
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+
+            // Helper function to add a row
+            function addRow(label, values) {
+                csvContent += escapeCSV(label);
+                values.forEach(val => {
+                    csvContent += "," + escapeCSV(val);
+                });
+                csvContent += "\n";
+            }
+
+            // Row 1: Check Item names
+            const checkItemNames = part.parameters.map(p => p.name);
+            addRow("Check Item", checkItemNames);
+
+            // Row 2: Characteristic values
+            const characteristics = part.parameters.map(p => {
+                return p.characteristic || `${p.nominal} ±${((p.usl - p.lsl) / 2).toFixed(4)}`;
+            });
+            addRow("Characteristic", characteristics);
+
+            // Row 3: Measuring Instrument
+            const instruments = part.parameters.map(p => {
+                return p.measuringInstrument || "Not Specified";
+            });
+            addRow("Measuring Instrument", instruments);
+
+            // Rows 4-14: Metrics
+            // USL
+            const uslValues = part.parameters.map(p => {
+                return p.usl.toFixed(4);
+            });
+            addRow("USL", uslValues);
+
+            // LSL
+            const lslValues = part.parameters.map(p => {
+                return p.lsl.toFixed(4);
+            });
+            addRow("LSL", lslValues);
+
+            // AVE (Average)
+            const aveValues = part.parameters.map(p => {
+                const stats = allStats[p.id];
+                return stats ? stats.mean.toFixed(4) : "";
+            });
+            addRow("AVE", aveValues);
+
+            // MAX
+            const maxValues = part.parameters.map(p => {
+                const stats = allStats[p.id];
+                return stats ? stats.max.toFixed(4) : "";
+            });
+            addRow("MAX", maxValues);
+
+            // MIN
+            const minValues = part.parameters.map(p => {
+                const stats = allStats[p.id];
+                return stats ? stats.min.toFixed(4) : "";
+            });
+            addRow("MIN", minValues);
+
+            // USL-LSL (Tolerance)
+            const toleranceValues = part.parameters.map(p => {
+                const stats = allStats[p.id];
+                return stats ? stats.tolerance.toFixed(4) : (p.usl - p.lsl).toFixed(4);
+            });
+            addRow("USL-LSL", toleranceValues);
+
+            // σ (Sigma - within)
+            const sigmaValues = part.parameters.map(p => {
+                const stats = allStats[p.id];
+                return stats ? stats.sigmaWithin.toFixed(4) : "";
+            });
+            addRow("sigma", sigmaValues);
+
+            // Cp
+            const cpValues = part.parameters.map(p => {
+                const stats = allStats[p.id];
+                return stats ? stats.Cp.toFixed(3) : "";
+            });
+            addRow("Cp", cpValues);
+
+            // Cpk
+            const cpkValues = part.parameters.map(p => {
+                const stats = allStats[p.id];
+                return stats ? stats.Cpk.toFixed(3) : "";
+            });
+            addRow("Cpk", cpkValues);
+
+            // PpU
+            const ppuValues = part.parameters.map(p => {
+                const stats = allStats[p.id];
+                return stats ? stats.PpU.toFixed(3) : "";
+            });
+            addRow("PpU", ppuValues);
+
+            // PpL
+            const pplValues = part.parameters.map(p => {
+                const stats = allStats[p.id];
+                return stats ? stats.PpL.toFixed(3) : "";
+            });
+            addRow("PpL", pplValues);
+
+            // Empty row separator
+            csvContent += "\n";
+
+            // Row: SI no. header
+            addRow("SI no.", checkItemNames);
+
+            // Rows: Sample data (1-50)
+            for (let sampleNum = 1; sampleNum <= 50; sampleNum++) {
+                const sampleValues = part.parameters.map(p => {
+                    const data = allData[p.id];
+                    if (data && data.length >= sampleNum) {
+                        return data[sampleNum - 1].toFixed(4);
+                    }
+                    return "";
+                });
+                addRow(sampleNum.toString(), sampleValues);
+            }
+
+            // Create download link
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `${part.id}_complete_capability_study.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // --- START ---
+        // Initialize the app when the DOM is loaded
+        document.addEventListener('DOMContentLoaded', initializeApp);
+
+    </script>
+</body>
+</html>
